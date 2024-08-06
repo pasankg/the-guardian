@@ -2,7 +2,16 @@ import Guardian from "guardian-js";
 import Form from "./FormComponent/Form";
 import { createContext } from "react";
 
-export const searchContext = createContext();
+interface GuardianApi {
+  content: unknown;
+  tags: unknown;
+  sections: unknown;
+  editions?: unknown;
+  item: unknown;
+  custom?: unknown;
+}
+
+export const searchContext = createContext<GuardianApi | undefined>(undefined);
 
 function App() {
   const apiKey: string = import.meta.env.VITE_GUARDIAN_API_KEY || "";
