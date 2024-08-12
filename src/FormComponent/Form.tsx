@@ -1,35 +1,40 @@
-import { useContext, useEffect, useState } from "react";
 import "./Form.css";
-import { searchContext } from "../App";
+import {
+  useState,
+  ChangeEvent,
+  useCallback,
+} from "react";
+import { debounce, size, map } from "lodash";
+import { useGetGuardianContent } from '../hooks'
+import { GuardianApiResponse, Article } from '../types'
 
 function Form() {
-  const guardian = useContext(searchContext);
-  const [term, setTerm] = useState("");
-  const [results, setResult] = useState([]);
+  const [term, setTerm] = useState(null);
+  const [results, setResult] = useState<Article[]>([]);
 
-  function handleSearchTerm(element: object) {
-    if (element.target.value.length > 5) {
-      setTerm(element.target.value);
+  const { getContent } = useGetGuardianContent()
+
+  const handleSearchTerm = async(value: string) => {
+    if (size(value) > 5) {
+      const results: GuardianApiResponse = await getContent(value)
+      const { response } = results || {}
+      if(!response?.results) return
+      setResult(response.results)
     }
   }
 
-  useEffect(() => {
-    console.log(term);
-    if (term.length > 5) {
-      const response = guardian.content
-        .search(`${term}`)
-        .then((response) => {
-          console.log(response);
-          if (response.results.length > 0) {
-            setResult(response.results);
-            console.log(results);
-          }
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-        });
-    }
-  }, [term]);
+  const debounceResults = useCallback(
+    debounce((value) => {
+      setTerm(value)
+      handleSearchTerm(value);
+    }, 500), // won't trigger the endpoint until user stops typing
+    []
+  );
+
+  const handleOnChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+    debounceResults(value);
+  };
 
   return (
     <div className="search-wrapper">
@@ -38,14 +43,14 @@ function Form() {
         <input
           type="text"
           placeholder="What are you after.."
-          onChange={handleSearchTerm}
+          onChange={handleOnChange}
         />
         <label className="search-term" htmlFor="search-term">
-          Results for <span className="term">{`${term}`}</span>
+          {term && (<>Results for <span className="term">{`${term}`}</span></>)}
         </label>
         <div className="results">
-          {results.map((item, index) => (
-            <li key={index}> {item.webTitle} </li>
+          {map(results, (item, index) => (
+            <li key={`article-list-${index}`}> {item?.webTitle || ''} </li>
           ))}
         </div>
       </div>
